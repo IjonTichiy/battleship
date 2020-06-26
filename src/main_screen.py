@@ -92,11 +92,10 @@ class GameWindow(qtw.QWidget):
 
 
 def start():
-    style = qdarkstyle.load_stylesheet_pyqt5()
     app = qtw.QApplication(sys.argv)
+    style = qdarkstyle.load_stylesheet_pyqt5()
     app.setStyleSheet(style)
-    # window = MainWindow()
-    window = GameWindow()
+    window = MainWindow()
     sys.exit(app.exec_())
 
 
