@@ -310,7 +310,7 @@ if __name__ == '__main__':
     app.setStyleSheet(style)
     widget = qtw.QWidget()
     playerView = qtw.QGraphicsView(widget)
-    playerView.setScene(Grid(playerView, player='enemy'))
+    playerView.setScene(Grid(playerView, player='player'))
     widget.setGeometry(300, 300, 400, 300)
     widget.show()
 
