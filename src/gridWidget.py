@@ -2,14 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import sys
-import pudb
 from PyQt5 import (QtWidgets as qtw, QtCore as qtc, QtGui as qtg, QtSvg as qsvg)
 import qdarkstyle
-
-
-Options = {
-        'gridSize'
-        }
 
 
 class Ship(qsvg.QGraphicsSvgItem):
@@ -62,27 +56,26 @@ class Ship(qsvg.QGraphicsSvgItem):
         self._orientation = 'h'
         self.setToolTip(ship_id)
         self.setScale(self.scaling*parent.rectSize/30)
-        self.enableDrag()
 
     def enableDrag(self):
         """
         allow to move ships at beginning of game (preparation mode)
         """
-        self.setFlag(qtw.QGraphicsItem.ItemIsSelectable)
-        self.setFlag(qtw.QGraphicsItem.ItemIsMovable)
-        self.setFlag(qtw.QGraphicsItem.ItemIsFocusable)
-        self.setFlag(qtw.QGraphicsItem.ItemSendsGeometryChanges)
-        self.setFlag(qtw.QGraphicsItem.ItemSendsScenePositionChanges)
+        self.setFlag(qtw.QGraphicsItem.ItemIsSelectable, True)
+        self.setFlag(qtw.QGraphicsItem.ItemIsMovable, True)
+        self.setFlag(qtw.QGraphicsItem.ItemIsFocusable, True)
+        self.setFlag(qtw.QGraphicsItem.ItemSendsGeometryChanges, True)
+        self.setFlag(qtw.QGraphicsItem.ItemSendsScenePositionChanges, True)
 
     def disableDrag(self):
         """
         disable movement when game starts
         """
-        self.setFlag(qtw.QGraphicsItem.ItemIsNotSelectable)
-        self.setFlag(qtw.QGraphicsItem.ItemIsNotMovable)
-        self.setFlag(qtw.QGraphicsItem.ItemIsNotFocusable)
-        self.setFlage(qtw.QGraphicsItem.ItemNotSendGeometryChanges)
-        self.setFlag(qtw.QGraphicsItem.ItemNotSendsScenePositionChanges)
+        self.setFlag(qtw.QGraphicsItem.ItemIsSelectable, False)
+        self.setFlag(qtw.QGraphicsItem.ItemIsMovable, False)
+        self.setFlag(qtw.QGraphicsItem.ItemIsFocusable, False)
+        self.setFlag(qtw.QGraphicsItem.ItemSendsGeometryChanges, False)
+        self.setFlag(qtw.QGraphicsItem.ItemSendsScenePositionChanges, False)
 
     def positionAt(self, i, j):
         self.setPos((1 + j)*self.parent.rectSize, (1 + i)*self.parent.rectSize)
@@ -103,34 +96,34 @@ class Ship(qsvg.QGraphicsSvgItem):
             self.snapToGrid()
 
     def keyPressEvent(self, event):
-        print(event.key())
         if self.parent.gameMode == 'preparation':
-
             if event.key() == 32:  # space
                 self.parent.markState(self, False)
                 self.rotateShip()
 
     def snapToGrid(self):
+        """
+        find the grid field which contains the upper left corner of the
+        ship and quantize the position to
+        """
         for i, row in enumerate(self.parent.fields):
-
             contain_check = [x.contains(self.pos()) for x in row]
-
             if not any(contain_check):
                 continue
-
             i, j, field = self.getValidField(i, row, contain_check)
-
             if self._orientation == 'h':
                 pos = qtc.QPointF(field.x(), field.y())
             elif self._orientation == 'v':
                 pos = qtc.QPointF(field.x(), field.y() + self.parent.rectSize)
-
             self.setPos(pos)
             self.index = (i, j)
             break
-
         else:
-
+            """
+            this will be executed when the current position is not inside one
+            of the grid fields. The position is then set to the the upper left
+            corner (origin) of the whole grid
+            """
             self.index = (0, 0)
             if self._orientation == 'h':
                 origin = self.parent.fields[0][0]
@@ -140,28 +133,29 @@ class Ship(qsvg.QGraphicsSvgItem):
                 self.setPos(origin.x(), origin.y())
 
     def getValidField(self, i, row, contain_check):
-
+        """
+        returns the grid field which the ship should be positioned at
+        """
         j, field = [(j, x) for j, x in enumerate(row)
                     if contain_check[j]][0]
-
         # check if ship is out of bounds in x-direction
         if (
                 self._orientation == 'h' and
                 j + self.extent >= self.parent.gridSize[0]):
             j = self.parent.gridSize[0] - self.extent
             field = row[j]
-
         # check if ship is out of bounds in y-direction
         if (
                 self._orientation == 'v' and
                 i - self.extent < 0):
             i = self.extent - 1
             field = self.parent.fields[i][j]
-
         return i, j, field
 
     def rotateShip(self):
-
+        """
+        Rotate the ship and position it inside the grid if necessary
+        """
         i, j = self.index
         if self._orientation == 'h':
             if i - self.extent < 0:
@@ -169,23 +163,15 @@ class Ship(qsvg.QGraphicsSvgItem):
             self.setRotation(-90)
             self.positionAt(i+1, j)
             self._orientation = 'v'
-
         elif self._orientation == 'v':
             if j + self.extent > self.parent.gridSize[0]:
                 j = self.parent.gridSize[0] - self.extent
                 i -= 1
-            self.rotateAroundCenter(0)
+            self.setRotation(0)
             self.positionAt(i, j)
             self._orientation = 'h'
-
         self.index = (i, j)
         self.parent.markState(self, True)
-
-    def rotateAroundCenter(self, angle):
-        """
-        TODO: rotate around center and not upper left corner
-        """
-        self.setRotation(angle)
 
 
 class CenteredTextItem(qtw.QGraphicsTextItem):
@@ -198,30 +184,60 @@ class CenteredTextItem(qtw.QGraphicsTextItem):
 
 
 class GridField(qtc.QRectF):
-
-    def __init__(self, *args, **kwargs):
-
-        super(GridField, self).__init__(*args, **kwargs)
-        self.occupied = False
-
-
-class Scene(qtw.QGraphicsScene):
     """
-    contains data
+    single field on the grid. Is needed because we want to mark if the field is
+    occupied -> GridField.occupied
+
+    also a simple getter setter implementation is shown examplary
     """
 
+    def __init__(self, index, size, *args, **kwargs):
+
+        super(GridField, self).__init__(
+                size*index[0], size*index[1], size, size)
+        self._occupied = False
+        self._index = index
+
+    @property
+    def index(self):
+        return self._index
+
+    @property
+    def occupied(self):
+        return self._occupied
+
+    @occupied.setter
+    def occupied(self, value):
+        self._occupied = value
+
+
+class Grid(qtw.QGraphicsScene):
+    """
+    contains the game data
+    """
     gridSize = (10, 11)
-    rectSize = 40
+    rectSize = 30
     gameMode = 'preparation'
 
-    def __init__(self, parent):
+    def __init__(self, parent, *args, player='player', **kwargs):
 
-        super(Scene, self).__init__(parent)
-        self.setSceneRect(0, 0, 700, 470)
+        super(Grid, self).__init__(parent)
+        self.player = player
+        self.setSceneRect(0, 0,
+                *[self.rectSize*(x + 2) for x in self.gridSize])
         self.createGrid(*self.gridSize)
-        self.ships = []
-        for i, ship_id in enumerate(Ship.ids.keys()):
-            self.addShip(i, ship_id)
+        self.initPlayer()
+
+    def initPlayer(self):
+
+        if self.player == 'player':
+
+            self.ships = []
+            for i, ship_id in enumerate(Ship.ids.keys()):
+                index = (i, self.gridSize[0] - Ship._extent[ship_id])
+                ship = self.addShip(ship_id, index)
+                ship.enableDrag()
+                self.ships.append(ship)
 
     def createGrid(self, width, height):
 
@@ -232,8 +248,7 @@ class Scene(qtw.QGraphicsScene):
         for y in range(height):
             row = []
             for x in range(width):
-                rect = GridField(
-                        rectSize*(1+x), rectSize*(1+y), rectSize, rectSize)
+                rect = GridField((1 + x, 1 + y), rectSize)
                 self.addRect(rect)
                 row.append(rect)
             self.fields.append(row)
@@ -253,43 +268,40 @@ class Scene(qtw.QGraphicsScene):
             item.centerAt(pos)
             self.row_ids.append(item)
 
-    def addShip(self, i, ship_id):
+    def addShip(self, ship_id, index):
         ship = Ship(ship_id, self)
-        index = (i, self.gridSize[0] - ship.extent)
         ship.positionAt(*index)
         ship.index = index
         self.markState(ship)
         self.addItem(ship)
-        self.ships.append(ship)
+        return ship
 
     def markState(self, ship, value=True):
         index = ship.index
         for extent in range(ship.extent):
             if ship._orientation == 'h':
-                print(index)
                 self.fields[index[0]][index[1] + extent].occupied = value
             elif ship._orientation == 'v':
                 self.fields[index[0] - extent][index[1]].occupied = value
-
-        self.printOccupied()
+        # self.printOccupied()  # for debug
 
     def printOccupied(self):
         for row in self.fields:
             print([field.occupied for field in row])
         print('\n')
 
+    def getClickedField(self, event):
+        for row in self.fields:
+            contain_check = [x.contains(event.pos()) for x in row]
+            if not any(contain_check): continue
+            return [x for j, x in enumerate(row) if contain_check[j]][0]
 
-class View(qtw.QGraphicsView):
-    """
-    displays data
-    """
-
-    def __init__(self, parent=None, scene=None):
-
-        super(View, self).__init__(parent)
-
-        self.setScene(Scene(self))
-        self.setMouseTracking(True)
+    def mousePressEvent(self, event):
+        super(Grid, self).mousePressEvent(event)
+        if self.player == 'enemy':
+            field = self.getClickedField(event)
+            if not field: return
+            print(field.index)
 
 
 if __name__ == '__main__':
@@ -297,7 +309,8 @@ if __name__ == '__main__':
     style = qdarkstyle.load_stylesheet_pyqt5()
     app.setStyleSheet(style)
     widget = qtw.QWidget()
-    playerView = View(widget)
+    playerView = qtw.QGraphicsView(widget)
+    playerView.setScene(Grid(playerView, player='enemy'))
     widget.setGeometry(300, 300, 400, 300)
     widget.show()
 

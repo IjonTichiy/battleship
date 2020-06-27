@@ -3,31 +3,35 @@
 
 
 import sys
-
-from PyQt5 import (QtWidgets as qtw, QtCore as qtc, QtGui as qtg)
 import qdarkstyle
+from PyQt5 import (QtWidgets as qtw, QtCore as qtc, QtGui as qtg)
+from gameScreen import GameScreen
+
 
 
 class MainWindow(qtw.QMainWindow):
 
     style = """
-    #centralWidget{
+    #mainButtons{
     border-image: url(rsc/MainWindow.jpg) 0 0 0 0 stretch stretch;
     }
     """
 
     username = None
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, parent, *args, **kwargs):
 
-        super(MainWindow, self).__init__()
+        super(MainWindow, self).__init__(parent)
+        self.parent = parent
 
         self.setWindowTitle('battleship V0.1')
         self.setObjectName("mainwindow")
         self.getUserName()
+        self.createButtons()
+        self.createGameScreen()
         self.initUI()
-        self.showMaximized()
-        self.setFixedSize(self.startMenu.size())
+        self.showFullScreen()
+        self.setMinimumSize(800, 400)
 
     def getUserName(self):
         """
@@ -40,62 +44,64 @@ class MainWindow(qtw.QMainWindow):
                     "Welcome to battleship!\nPlease enter your name:",
                     qtw.QLineEdit.Normal)
             if not ok: sys.exit()
-            if username: self.username = ok
+            if username: self.username = username
+
 
     def initUI(self):
 
-        self.startMenu = qtw.QWidget(objectName='centralWidget')
-        self.startMenu.setStyleSheet(self.style)
-        self.setCentralWidget(self.startMenu)
+        self.stackWidget = qtw.QStackedWidget(objectName='centralWidget')
+        self.stackWidget.setStyleSheet(self.style)
+        self.stackWidget.addWidget(self.mainMenu)
+        self.stackWidget.addWidget(self.gameScreen)
+        self.setCentralWidget(self.stackWidget)
+        self.connect()
 
+    def createButtons(self):
+
+        self.mainMenu = qtw.QWidget(objectName='mainButtons')
         self.mainButtons = qtw.QWidget()
-        self.mainButtons.setSizePolicy(
-                qtw.QSizePolicy.Maximum, qtw.QSizePolicy.Maximum)
+        buttonBox = qtw.QGridLayout()
+        buttonBox.addWidget(self.mainButtons, 1, 1)
+        self.mainMenu.setLayout(buttonBox)
+
+        sizePolicy = qtw.QSizePolicy.Maximum
+
+        self.mainButtons.setSizePolicy(sizePolicy, sizePolicy)
 
         self.btn_newGame = qtw.QPushButton(
                 "New Game", objectName='button:new game')
-        self.btn_newGame.setSizePolicy(
-                qtw.QSizePolicy.Maximum, qtw.QSizePolicy.Maximum)
-
         self.btn_options = qtw.QPushButton(
                 "Options", objectName='button:options')
-        self.btn_options.setSizePolicy(
-                qtw.QSizePolicy.Maximum, qtw.QSizePolicy.Maximum)
-
         self.btn_exit = qtw.QPushButton(
                 "Exit", objectName='button:exit')
-        self.btn_exit.setSizePolicy(
-                qtw.QSizePolicy.Maximum, qtw.QSizePolicy.Maximum)
 
+        self.btn_newGame.setSizePolicy(sizePolicy, sizePolicy)
+        self.btn_options.setSizePolicy(sizePolicy, sizePolicy)
+        self.btn_exit.setSizePolicy(sizePolicy, sizePolicy)
 
         buttonLayout = qtw.QVBoxLayout()
         buttonLayout.addWidget(self.btn_newGame)
         buttonLayout.addWidget(self.btn_options)
         buttonLayout.addWidget(self.btn_exit)
+
         self.mainButtons.setLayout(buttonLayout)
 
-        layout = qtw.QGridLayout()
-        layout.addWidget(self.mainButtons, 1, 1)
+    def createGameScreen(self):
+        self.gameScreen = GameScreen()
 
-        self.startMenu.setLayout(layout)
+    def createGame(self):
+        self.gameScreen.createNewGame()
 
-
-class GameWindow(qtw.QWidget):
-
-    def __init__(self, *args, **kwargs):
-        super(GameWindow, self).__init__()
-
-        self.show()
-
-    def createCanvas(self):
-        self.playerScreen = qtc.QLabel()
+    def connect(self):
+        self.btn_newGame.clicked.connect(self.createGame)
 
 
 def start():
     app = qtw.QApplication(sys.argv)
+    desktop = app.desktop()
     style = qdarkstyle.load_stylesheet_pyqt5()
     app.setStyleSheet(style)
-    window = MainWindow()
+    window = MainWindow(desktop)
     sys.exit(app.exec_())
 
 

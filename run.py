@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from src import ui, data
+from src import Game
 
-ui.start()
+Game.start()
