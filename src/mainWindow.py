@@ -28,7 +28,6 @@ class MainWindow(qtw.QMainWindow):
         self.setObjectName("mainwindow")
         self.getUserName()
         self.createButtons()
-        self.createGameScreen()
         self.initUI()
         self.showFullScreen()
         self.setMinimumSize(800, 400)
@@ -47,13 +46,11 @@ class MainWindow(qtw.QMainWindow):
             if ok and not self.username: self.username = 'user'
             if username: self.username = username
 
-
     def initUI(self):
 
         self.stackWidget = qtw.QStackedWidget(objectName='centralWidget')
         self.stackWidget.setStyleSheet(self.style)
         self.stackWidget.addWidget(self.mainMenu)
-        self.stackWidget.addWidget(self.gameScreen)
         self.setCentralWidget(self.stackWidget)
         self.connect()
 
@@ -86,14 +83,19 @@ class MainWindow(qtw.QMainWindow):
         buttonLayout.addWidget(self.btn_exit)
         self.mainButtons.setLayout(buttonLayout)
 
-    def createGameScreen(self):
-        self.gameScreen = GameScreen(parent=self)
-
     def showGameScreen(self):
+        self.gameScreen = GameScreen(parent=self)
+        self.stackWidget.addWidget(self.gameScreen)
         self.stackWidget.setCurrentWidget(self.gameScreen)
 
     def connect(self):
         self.btn_newGame.clicked.connect(self.showGameScreen)
+
+    def exitGame(self):
+        self.stackWidget.removeWidget(self.gameScreen)
+        self.gameScreen.deleteLater()
+        self.gameScreen = None
+        self.stackWidget.setCurrentWidget(self.mainMenu)
 
 
 def start():

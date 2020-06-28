@@ -104,11 +104,10 @@ class Ship(qsvg.QGraphicsSvgItem):
 
     def mousePressEvent(self, event):
         super(Ship, self).mousePressEvent(event)
-        self.parent.markState(self, False)
 
     def mouseReleaseEvent(self, event):
         super(Ship, self).mouseReleaseEvent(event)
-        self.parent.markState(self, True)
+        self.parent.markState()
 
     def mouseMoveEvent(self, event):
         super(Ship, self).mouseMoveEvent(event)
@@ -116,8 +115,8 @@ class Ship(qsvg.QGraphicsSvgItem):
 
     def keyPressEvent(self, event):
         if event.key() == 32:  # space
-            self.parent.markState(self, False)
             self.rotateShip()
+            self.parent.markState()
 
     def snapToGrid(self):
         """
@@ -189,7 +188,6 @@ class Ship(qsvg.QGraphicsSvgItem):
             self.setRotation(0)
             self.positionAt(i, j)
         self.index = (i, j)
-        self.parent.markState(self, True)
 
 
 class CenteredTextItem(qtw.QGraphicsTextItem):
@@ -229,6 +227,13 @@ class GridField(qtc.QRectF):
     def occupied(self, value):
         self._occupied = value
 
+    def setOccupied(self, val):
+        if val not in [True, False]:
+            raise ValueError
+        self._occupied = val
+
+    def markHit(self):
+
 
 class Grid(qtw.QGraphicsScene):
     """
@@ -243,14 +248,12 @@ class Grid(qtw.QGraphicsScene):
 
         if gridType not in self.gridTypes: raise NotImplementedError
         super(Grid, self).__init__(parent)
+        self.ships = []
         self.gridType = gridType
         self.fieldSelected = None
         self.setSceneRect(0, 0,
                 *[self.rectSize*(x + 2) for x in self.gridSize])
         self.createGrid(*self.gridSize)
-        self.randomizePlacement()
-        if self.gridType == 'player':
-            [ship.enableDrag() for ship in self.ships]
 
     def createGrid(self, width, height):
 
@@ -283,7 +286,9 @@ class Grid(qtw.QGraphicsScene):
 
     def randomizePlacement(self):
 
-        self.ships = []
+        if self.ships:
+            [self.removeShip(ship) for ship in self.ships]
+
         no = 0
         finished = False
         pu.db
@@ -308,7 +313,6 @@ class Grid(qtw.QGraphicsScene):
             if not self.checkReady():
                 self.removeShip(ship)
             else:
-                self.markState(ship)
                 no += 1
                 if no == len(shipIds):
                     finished = True
@@ -321,18 +325,39 @@ class Grid(qtw.QGraphicsScene):
         ship.index = index
         self.addItem(ship)
 
-    def removeShip(self, ship):
-        self.ships = self.ships[:-1]
-        self.removeItem(ship)
+    def enableDrag(self):
+        [ship.enableDrag() for ship in self.ships]
 
-    def markState(self, ship, value=True):
-        index = ship.index
-        for offset in range(ship.extent):
-            if ship.orientation == 'h':
-                self.fields[index[0]][index[1] + offset].occupied = value
-            elif ship.orientation == 'v':
-                self.fields[index[0] - offset][index[1]].occupied = value
+    def disableDrag(self):
+        [ship.disableDrag() for ship in self.ships]
+
+    def setShipVisibility(self, val):
+        [ship.setVisible(val) for ship in self.ships]
+
+    def removeShip(self, shipToRemove):
+        self.ships = [ship for ship in self.ships if not ship == shipToRemove]
+        self.removeItem(shipToRemove)
+
+    def markState(self):
+
+        self.resetState()
+
+        for ship in self.ships:
+            index = ship.index
+            for offset in range(ship.extent):
+                if ship.orientation == 'h':
+                    self.fields[index[0]][index[1] + offset].occupied = True
+                elif ship.orientation == 'v':
+                    self.fields[index[0] - offset][index[1]].occupied = True
         self.printOccupied()  # for debug
+
+    def resetState(self):
+        for row in self.fields:
+            [field.setOccupied(False) for field in row]
+
+    def finalizePlacement(self):
+        self.markState()
+        for ship in self.ships: ship.disableDrag()
 
     def checkReady(self):
         """

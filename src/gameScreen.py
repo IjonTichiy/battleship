@@ -30,10 +30,13 @@ class StatusBar(qtw.QWidget):
         self.layout = qtw.QGridLayout()
         self.status = qtw.QLabel("Place Your Ships!")
         self.helphint = qtw.QLabel('Press ? for help')
-        self.btn_startGame = qtw.QPushButton("Start Game")
+        self.btn_startGame = qtw.QPushButton('Start Game')
+        self.btn_randomize = qtw.QPushButton('Randomize')
+        self.btn_exitGame = qtw.QPushButton('Exit')
         self.layout.addWidget(self.btn_startGame, 0, 0)
-        self.layout.addWidget(self.status, 0, 1)
-        self.layout.addWidget(self.helphint, 0, 2)
+        self.layout.addWidget(self.btn_randomize, 0, 1)
+        self.layout.addWidget(self.status, 0, 2)
+        self.layout.addWidget(self.helphint, 0, 3)
 
         self.setSizePolicy(qtw.QSizePolicy.Maximum, qtw.QSizePolicy.Maximum)
 
@@ -41,6 +44,17 @@ class StatusBar(qtw.QWidget):
 
     def setStatus(self, text):
         self.status.setText(text)
+
+    def enterGameMode(self):
+        self.btn_randomize.setEnabled(False)
+        self.btn_randomize.disconnect()
+        self.layout.removeWidget(self.btn_randomize)
+        self.btn_randomize.deleteLater()
+        self.btn_startGame.setEnabled(False)
+        self.btn_startGame.disconnect()
+        self.layout.removeWidget(self.btn_startGame)
+        self.btn_startGame.deleteLater()
+        self.layout.addWidget(self.btn_exitGame, 0, 0)
 
 
 class GameScreen(qtw.QWidget):
@@ -63,10 +77,14 @@ class GameScreen(qtw.QWidget):
 
         self.playerView = qtw.QGraphicsView(self.player)
         self.playerScene = Grid(self.playerView, gridType='player')
+        self.playerScene.randomizePlacement()
+        self.playerScene.enableDrag()
         self.playerView.setScene(self.playerScene)
 
         self.enemyView = qtw.QGraphicsView(self.enemy)
         self.enemyScene = Grid(self.enemyView, gridType='enemy')
+        # self.enemyScene.randomizePlacement()
+        # self.enemyScene.setShipVisibility(False)
         self.enemyView.setScene(self.enemyScene)
 
         self.setGeometry(300, 300, 400, 300)
@@ -74,7 +92,12 @@ class GameScreen(qtw.QWidget):
         self.show()
 
     def connect(self):
-        self.statusBar.btn_startGame.clicked.connect(self.startGame)
+        self.statusBar.btn_startGame.clicked.connect(
+                self.startGame)
+        self.statusBar.btn_randomize.clicked.connect(
+                self.playerScene.randomizePlacement)
+        self.statusBar.btn_exitGame.clicked.connect(
+                self.exitGame)
 
     def startGame(self):
 
@@ -83,9 +106,12 @@ class GameScreen(qtw.QWidget):
                     'Ships are not placed according to rules!')
             return
 
-        for ship in self.playerScene.ships: ship.disableDrag()
-
+        self.playerScene.finalizePlacement()
+        self.statusBar.enterGameMode()
         self.runGameLoop()
+
+    def exitGame(self):
+        self.parent.exitGame()
 
     def runGameLoop(self):
 
@@ -96,10 +122,21 @@ class GameScreen(qtw.QWidget):
 
         while (not gameFinished):
             qtw.QApplication.processEvents()
+            if not self.isAlive():
+                sys.exit()
+
             if Grid.currentPlayer == 'player':
                 self.playerTurn()
             elif Grid.currentPlayer == 'enemy':
                 self.enemyTurn()
+
+    def isAlive(self):
+        if self.parent:
+            if not self.parent.isVisible(): return False
+            else: return True
+        else:
+            if not self.isVisble(): return False
+            else: return True
 
     def playerTurn(self):
 
