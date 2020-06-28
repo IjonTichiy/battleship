@@ -5,34 +5,48 @@ import sys
 from PyQt5 import (QtWidgets as qtw, QtCore as qtc, QtGui as qtg, QtSvg as qsvg)
 import pudb
 from random import choice, randint
+from pathlib import Path
+
+rsc = Path(__file__).absolute().parent.parent / 'rsc'
+
+
+class HitIcon(qsvg.QGraphicsSvgItem):
+
+    ids = {
+            'hit': rsc / 'HitShot.svg',
+            'miss': rsc / 'MissedShot.svg'}
+
+    def __init__(self, field, shot):
+        super(HitIcon, self).__init__(self.ids[shot])
+        self.setPos(field.pos())
 
 
 class Ship(qsvg.QGraphicsSvgItem):
 
     ids = {
-            'Carrier': 'rsc/Carrier.svg',
-            'Battleship': 'rsc/Battleship.svg',
-            'Submarine': 'rsc/Submarine.svg',
-            'Cruiser': 'rsc/Cruiser.svg',
-            'Destroyer': 'rsc/Destroyer.svg'}
+            'Carrier':      rsc / 'Carrier.svg',
+            'Battleship':   rsc /'Battleship.svg',
+            'Submarine':    rsc / 'Submarine.svg',
+            'Cruiser':      rsc / 'Cruiser.svg',
+            'Destroyer':    rsc / 'Destroyer.svg'}
 
     _scaling = {
-            'Carrier': 1.45,
-            'Battleship': 1.15,
-            'Submarine': .9,
-            'Cruiser': .9,
-            'Destroyer': .6 }
+            'Carrier':      1.45,
+            'Battleship':   1.15,
+            'Submarine':    .9,
+            'Cruiser':      .9,
+            'Destroyer':    .6 }
 
     _extent = {
-            'Carrier': 5,
-            'Battleship': 4,
-            'Submarine': 3,
-            'Cruiser': 3,
-            'Destroyer': 2 }
+            'Carrier':      5,
+            'Battleship':   4,
+            'Submarine':    3,
+            'Cruiser':      3,
+            'Destroyer':    2 }
 
     _orientation_angle = {
-            'h': 0,
-            'v': -90}
+            'h':            0,
+            'v':            -90}
 
     @property
     def extent(self):
@@ -232,7 +246,9 @@ class GridField(qtc.QRectF):
             raise ValueError
         self._occupied = val
 
-    def markHit(self):
+    def hit(self):
+        self._hit = True
+        self.status = HitIcon()
 
 
 class Grid(qtw.QGraphicsScene):
@@ -243,6 +259,7 @@ class Grid(qtw.QGraphicsScene):
     rectSize = 30
     gridTypes = ('player', 'enemy')
     currentPlayer = None
+    gameFinished = False
 
     def __init__(self, parent, *args, gridType='player', **kwargs):
 

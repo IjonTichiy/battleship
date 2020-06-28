@@ -1,0 +1,3 @@
+Cruiser.svg: Battleship by Anand Prahlad from thenounproject.com
+Carrier.svg: USS Ronald Reagan (CVN-76) by Salaidinovich from thenounproject.com
+Destroyer.svg: warship by zidney from thenounproject.com

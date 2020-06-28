@@ -3,8 +3,9 @@
 
 import sys
 from pathlib import Path
-from random import choice
+from random import choice, randrange
 from PyQt5 import (QtWidgets as qtw, QtCore as qtc, QtGui as qtg, QtSvg as qsvg)
+from time import sleep
 
 
 from gridWidget import Grid
@@ -116,11 +117,9 @@ class GameScreen(qtw.QWidget):
     def runGameLoop(self):
 
         Grid.currentPlayer = choice(('player', 'enemy'))
-        gameFinished = False
 
-        self.statusBar.setStatus(f"{Grid.currentPlayer}'s Turn!")
-
-        while (not gameFinished):
+        while (not Grid.gameFinished):
+            self.statusBar.setStatus(f"{Grid.currentPlayer}'s Turn!")
             qtw.QApplication.processEvents()
             if not self.isAlive():
                 sys.exit()
@@ -143,10 +142,16 @@ class GameScreen(qtw.QWidget):
         if not self.enemyScene.fieldSelected: return
         field = self.enemyScene.fieldSelected
         self.enemyScene.fieldSelected = None
-        print(field)
+        field.hit()
+        Grid.currentPlayer = 'enemy'
 
     def enemyTurn(self):
-        pass
+        sleep(0.2)
+        target = (randrange(0, Grid.gridSize[1]),
+                  randrange(0, Grid.gridSize[0]))
+
+        self.playerScene.fields(*target).hit()
+        Grid.currentPlayer = 'player'
 
     def showHelp(self):
 
