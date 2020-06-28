@@ -1,0 +1,9 @@
+Rules:
+Drag and drop your ships one the grid with one field distance to each other.
+When you are ready press the "Start Game" button.
+The beginning player is chosen at random.
+When it's your turn you can select a field on the enemy field to bomb it.
+
+Controls:
+Space: Rotate selected ship
+?: Show this message box

@@ -44,6 +44,7 @@ class MainWindow(qtw.QMainWindow):
                     "Welcome to battleship!\nPlease enter your name:",
                     qtw.QLineEdit.Normal)
             if not ok: sys.exit()
+            if ok and not self.username: self.username = 'user'
             if username: self.username = username
 
 
@@ -83,17 +84,16 @@ class MainWindow(qtw.QMainWindow):
         buttonLayout.addWidget(self.btn_newGame)
         buttonLayout.addWidget(self.btn_options)
         buttonLayout.addWidget(self.btn_exit)
-
         self.mainButtons.setLayout(buttonLayout)
 
     def createGameScreen(self):
-        self.gameScreen = GameScreen()
+        self.gameScreen = GameScreen(parent=self)
 
-    def createGame(self):
-        self.gameScreen.createNewGame()
+    def showGameScreen(self):
+        self.stackWidget.setCurrentWidget(self.gameScreen)
 
     def connect(self):
-        self.btn_newGame.clicked.connect(self.createGame)
+        self.btn_newGame.clicked.connect(self.showGameScreen)
 
 
 def start():

@@ -3,7 +3,8 @@
 
 import sys
 from PyQt5 import (QtWidgets as qtw, QtCore as qtc, QtGui as qtg, QtSvg as qsvg)
-import qdarkstyle
+import pudb
+from random import choice, randint
 
 
 class Ship(qsvg.QGraphicsSvgItem):
@@ -29,6 +30,10 @@ class Ship(qsvg.QGraphicsSvgItem):
             'Cruiser': 3,
             'Destroyer': 2 }
 
+    _orientation_angle = {
+            'h': 0,
+            'v': -90}
+
     @property
     def extent(self):
         return self._extent[self.id]
@@ -37,7 +42,23 @@ class Ship(qsvg.QGraphicsSvgItem):
     def scaling(self):
         return self._scaling[self.id]
 
-    def __init__(self, ship_id, parent):
+    @property
+    def index(self):
+        return self._index
+
+    @index.setter
+    def index(self, value):
+        self._index = value
+
+    @property
+    def orientation(self):
+        return self._orientation
+
+    @orientation.setter
+    def orientation(self, value):
+        self._orientation = value
+
+    def __init__(self, ship_id, parent, orientation='h'):
         """
         This class provides the basic functionality to place ships at the
         beginning of the game.
@@ -51,9 +72,10 @@ class Ship(qsvg.QGraphicsSvgItem):
 
         self.id = ship_id
         self.parent = parent
-        self.index = None
+        self._index = None
         super(Ship, self).__init__(self.ids[ship_id])
-        self._orientation = 'h'
+        self.orientation = orientation
+        self.setRotation(self._orientation_angle[orientation])
         self.setToolTip(ship_id)
         self.setScale(self.scaling*parent.rectSize/30)
 
@@ -82,24 +104,20 @@ class Ship(qsvg.QGraphicsSvgItem):
 
     def mousePressEvent(self, event):
         super(Ship, self).mousePressEvent(event)
-        if self.parent.gameMode == 'preparation':
-            self.parent.markState(self, False)
+        self.parent.markState(self, False)
 
     def mouseReleaseEvent(self, event):
         super(Ship, self).mouseReleaseEvent(event)
-        if self.parent.gameMode == 'preparation':
-            self.parent.markState(self, True)
+        self.parent.markState(self, True)
 
     def mouseMoveEvent(self, event):
         super(Ship, self).mouseMoveEvent(event)
-        if self.parent.gameMode == 'preparation':
-            self.snapToGrid()
+        self.snapToGrid()
 
     def keyPressEvent(self, event):
-        if self.parent.gameMode == 'preparation':
-            if event.key() == 32:  # space
-                self.parent.markState(self, False)
-                self.rotateShip()
+        if event.key() == 32:  # space
+            self.parent.markState(self, False)
+            self.rotateShip()
 
     def snapToGrid(self):
         """
@@ -111,9 +129,9 @@ class Ship(qsvg.QGraphicsSvgItem):
             if not any(contain_check):
                 continue
             i, j, field = self.getValidField(i, row, contain_check)
-            if self._orientation == 'h':
+            if self.orientation == 'h':
                 pos = qtc.QPointF(field.x(), field.y())
-            elif self._orientation == 'v':
+            elif self.orientation == 'v':
                 pos = qtc.QPointF(field.x(), field.y() + self.parent.rectSize)
             self.setPos(pos)
             self.index = (i, j)
@@ -125,10 +143,10 @@ class Ship(qsvg.QGraphicsSvgItem):
             corner (origin) of the whole grid
             """
             self.index = (0, 0)
-            if self._orientation == 'h':
+            if self.orientation == 'h':
                 origin = self.parent.fields[0][0]
                 self.setPos(origin.x(), origin.y())
-            if self._orientation == 'v':
+            if self.orientation == 'v':
                 origin = self.parent.fields[self.extent][0]
                 self.setPos(origin.x(), origin.y())
 
@@ -140,13 +158,13 @@ class Ship(qsvg.QGraphicsSvgItem):
                     if contain_check[j]][0]
         # check if ship is out of bounds in x-direction
         if (
-                self._orientation == 'h' and
+                self.orientation == 'h' and
                 j + self.extent >= self.parent.gridSize[0]):
             j = self.parent.gridSize[0] - self.extent
             field = row[j]
         # check if ship is out of bounds in y-direction
         if (
-                self._orientation == 'v' and
+                self.orientation == 'v' and
                 i - self.extent < 0):
             i = self.extent - 1
             field = self.parent.fields[i][j]
@@ -157,19 +175,19 @@ class Ship(qsvg.QGraphicsSvgItem):
         Rotate the ship and position it inside the grid if necessary
         """
         i, j = self.index
-        if self._orientation == 'h':
+        if self.orientation == 'h':
+            self.orientation = 'v'
             if i - self.extent < 0:
                 i = self.extent - 1
             self.setRotation(-90)
             self.positionAt(i+1, j)
-            self._orientation = 'v'
-        elif self._orientation == 'v':
+        elif self.orientation == 'v':
+            self.orientation = 'h'
             if j + self.extent > self.parent.gridSize[0]:
                 j = self.parent.gridSize[0] - self.extent
                 i -= 1
             self.setRotation(0)
             self.positionAt(i, j)
-            self._orientation = 'h'
         self.index = (i, j)
         self.parent.markState(self, True)
 
@@ -196,7 +214,8 @@ class GridField(qtc.QRectF):
         super(GridField, self).__init__(
                 size*index[0], size*index[1], size, size)
         self._occupied = False
-        self._index = index
+        self._index = (index[0] - 1, index[1] - 1)
+        self._hit = False
 
     @property
     def index(self):
@@ -215,29 +234,23 @@ class Grid(qtw.QGraphicsScene):
     """
     contains the game data
     """
-    gridSize = (10, 11)
+    gridSize = (10, 10)
     rectSize = 30
-    gameMode = 'preparation'
+    gridTypes = ('player', 'enemy')
+    currentPlayer = None
 
-    def __init__(self, parent, *args, player='player', **kwargs):
+    def __init__(self, parent, *args, gridType='player', **kwargs):
 
+        if gridType not in self.gridTypes: raise NotImplementedError
         super(Grid, self).__init__(parent)
-        self.player = player
+        self.gridType = gridType
+        self.fieldSelected = None
         self.setSceneRect(0, 0,
                 *[self.rectSize*(x + 2) for x in self.gridSize])
         self.createGrid(*self.gridSize)
-        self.initPlayer()
-
-    def initPlayer(self):
-
-        if self.player == 'player':
-
-            self.ships = []
-            for i, ship_id in enumerate(Ship.ids.keys()):
-                index = (i, self.gridSize[0] - Ship._extent[ship_id])
-                ship = self.addShip(ship_id, index)
-                ship.enableDrag()
-                self.ships.append(ship)
+        self.randomizePlacement()
+        if self.gridType == 'player':
+            [ship.enableDrag() for ship in self.ships]
 
     def createGrid(self, width, height):
 
@@ -268,22 +281,110 @@ class Grid(qtw.QGraphicsScene):
             item.centerAt(pos)
             self.row_ids.append(item)
 
-    def addShip(self, ship_id, index):
-        ship = Ship(ship_id, self)
-        ship.positionAt(*index)
+    def randomizePlacement(self):
+
+        self.ships = []
+        no = 0
+        finished = False
+        pu.db
+        shipIds = [x for x in Ship.ids.keys()]
+        while not finished:
+            shipId = shipIds[no]
+            extent = Ship._extent[shipId]
+            orientation = choice(('v', 'h'))
+            if orientation == 'h':
+                index = (randint(0, self.gridSize[0] - 1),
+                         randint(0, self.gridSize[1] - 1 - extent))
+            elif orientation == 'v':
+                index = (randint(extent - 1, self.gridSize[0] - 1),
+                         randint(0, self.gridSize[1] - 1))
+            ship = Ship(shipId, self, orientation)
+            try:
+                self.addShip(ship, index)
+            except Exception:
+                pu.db
+            ship.enableDrag()
+            self.ships.append(ship)
+            if not self.checkReady():
+                self.removeShip(ship)
+            else:
+                self.markState(ship)
+                no += 1
+                if no == len(shipIds):
+                    finished = True
+
+    def addShip(self, ship, index, visible=True):
+        if ship.orientation == 'h':
+            ship.positionAt(*index)
+        elif ship.orientation == 'v':
+            ship.positionAt(index[0] + 1, index[1])
         ship.index = index
-        self.markState(ship)
         self.addItem(ship)
-        return ship
+
+    def removeShip(self, ship):
+        self.ships = self.ships[:-1]
+        self.removeItem(ship)
 
     def markState(self, ship, value=True):
         index = ship.index
-        for extent in range(ship.extent):
-            if ship._orientation == 'h':
-                self.fields[index[0]][index[1] + extent].occupied = value
-            elif ship._orientation == 'v':
-                self.fields[index[0] - extent][index[1]].occupied = value
-        # self.printOccupied()  # for debug
+        for offset in range(ship.extent):
+            if ship.orientation == 'h':
+                self.fields[index[0]][index[1] + offset].occupied = value
+            elif ship.orientation == 'v':
+                self.fields[index[0] - offset][index[1]].occupied = value
+        self.printOccupied()  # for debug
+
+    def checkReady(self):
+        """
+        check if the ships are placed according to the rules before game start
+        """
+        check = [[0 for _1 in range(self.gridSize[0])]
+                 for _2 in range(self.gridSize[1])]
+
+        for ship in self.ships:
+            j, i = ship.index
+            extent = ship.extent
+            orientation = ship.orientation
+
+            if orientation == 'h':
+                indices = [
+                        (i - 1, j, 1), (i - 1, j - 1, 1), (i - 1, j + 1, 1),
+                        (i + extent, j - 1, 1), (i + extent, j + 1, 1),
+                        (i + extent, j, 1)]
+
+                for offset in range(extent):
+                    indices.extend([
+                        (i+offset, j, 2),
+                        (i + offset, j - 1, 1),
+                        (i + offset, j + 1, 1)])
+
+            elif orientation == 'v':
+                indices = [
+                        (i, j + 1, 1), (i - 1, j + 1, 1), (i + 1, j + 1, 1),
+                        (i, j - extent, 1), (i - 1, j - extent, 1),
+                        (i + 1, j - extent, 1)]
+
+                for offset in range(extent):
+                    indices.extend([
+                            (i, j - offset, 2),
+                            (i - 1, j - offset, 1),
+                            (i + 1, j - offset, 1)])
+
+            for i_, j_, val in indices:
+                if (i_ < 0 or i_ >= self.gridSize[0] or
+                        j_ < 0 or j_ >= self.gridSize[1]): continue
+                check[j_][i_] += val
+
+        print('check:')
+        for row in check:
+            print([i for i in row])
+        print('\n')
+
+        for row in check:
+            if any([x > 2 for x in row]):
+                return False
+        else:
+            return True
 
     def printOccupied(self):
         for row in self.fields:
@@ -298,19 +399,29 @@ class Grid(qtw.QGraphicsScene):
 
     def mousePressEvent(self, event):
         super(Grid, self).mousePressEvent(event)
-        if self.player == 'enemy':
+        if self.gridType == 'enemy':
             field = self.getClickedField(event)
-            if not field: return
-            print(field.index)
+            if not field or Grid.currentPlayer == 'enemy': return
+            self.fieldSelected = field
 
 
 if __name__ == '__main__':
     app = qtw.QApplication(sys.argv)
-    style = qdarkstyle.load_stylesheet_pyqt5()
-    app.setStyleSheet(style)
+
     widget = qtw.QWidget()
-    playerView = qtw.QGraphicsView(widget)
-    playerView.setScene(Grid(playerView, player='player'))
+    player = qtw.QWidget()
+    enemy = qtw.QWidget()
+    layout = qtw.QGridLayout()
+    layout.addWidget(enemy, 0, 0, 5, 1)
+    layout.addWidget(player, 5, 0, 5, 1)
+    widget.setLayout(layout)
+
+    playerView = qtw.QGraphicsView(player)
+    playerView.setScene(Grid(playerView, gridType='player'))
+
+    enemyView = qtw.QGraphicsView(enemy)
+    enemyView.setScene(Grid(enemyView, gridType='enemy'))
+
     widget.setGeometry(300, 300, 400, 300)
     widget.show()
 
