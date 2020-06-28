@@ -3,7 +3,6 @@
 
 import sys
 from PyQt5 import (QtWidgets as qtw, QtCore as qtc, QtGui as qtg, QtSvg as qsvg)
-import pudb
 from random import choice, randint
 from pathlib import Path
 
@@ -13,12 +12,20 @@ rsc = Path(__file__).absolute().parent.parent / 'rsc'
 class HitIcon(qsvg.QGraphicsSvgItem):
 
     ids = {
-            'hit': rsc / 'HitShot.svg',
-            'miss': rsc / 'MissedShot.svg'}
+            True: rsc / 'HitShot.svg',
+            False: rsc / 'MissedShot.svg'}
 
-    def __init__(self, field, shot):
-        super(HitIcon, self).__init__(self.ids[shot])
-        self.setPos(field.pos())
+    scaling = {
+            True: .3,
+            False: .3}
+
+    color = {
+            True: qtc.Qt.green,
+            False: qtc.Qt.red}
+
+    def __init__(self, field):
+        super(HitIcon, self).__init__(str(self.ids[field.occupied]))
+        self.setScale(self.scaling[field.occupied])
 
 
 class Ship(qsvg.QGraphicsSvgItem):
@@ -87,7 +94,7 @@ class Ship(qsvg.QGraphicsSvgItem):
         self.id = ship_id
         self.parent = parent
         self._index = None
-        super(Ship, self).__init__(self.ids[ship_id])
+        super(Ship, self).__init__(str(self.ids[ship_id]))
         self.orientation = orientation
         self.setRotation(self._orientation_angle[orientation])
         self.setToolTip(ship_id)
@@ -221,13 +228,16 @@ class GridField(qtc.QRectF):
     also a simple getter setter implementation is shown examplary
     """
 
-    def __init__(self, index, size, *args, **kwargs):
+    def __init__(self, parent, index, size, *args, **kwargs):
+
+        self.parent = parent
 
         super(GridField, self).__init__(
                 size*index[0], size*index[1], size, size)
         self._occupied = False
         self._index = (index[0] - 1, index[1] - 1)
         self._hit = False
+        self.status = None
 
     @property
     def index(self):
@@ -248,7 +258,9 @@ class GridField(qtc.QRectF):
 
     def hit(self):
         self._hit = True
-        self.status = HitIcon()
+        self.status = HitIcon(self)
+        self.parent.addItem(self.status)
+        self.status.setPos(self.topLeft())
 
 
 class Grid(qtw.QGraphicsScene):
@@ -281,7 +293,7 @@ class Grid(qtw.QGraphicsScene):
         for y in range(height):
             row = []
             for x in range(width):
-                rect = GridField((1 + x, 1 + y), rectSize)
+                rect = GridField(self, (1 + x, 1 + y), rectSize)
                 self.addRect(rect)
                 row.append(rect)
             self.fields.append(row)
@@ -308,7 +320,6 @@ class Grid(qtw.QGraphicsScene):
 
         no = 0
         finished = False
-        pu.db
         shipIds = [x for x in Ship.ids.keys()]
         while not finished:
             shipId = shipIds[no]
@@ -321,10 +332,7 @@ class Grid(qtw.QGraphicsScene):
                 index = (randint(extent - 1, self.gridSize[0] - 1),
                          randint(0, self.gridSize[1] - 1))
             ship = Ship(shipId, self, orientation)
-            try:
-                self.addShip(ship, index)
-            except Exception:
-                pu.db
+            self.addShip(ship, index)
             ship.enableDrag()
             self.ships.append(ship)
             if not self.checkReady():
@@ -468,5 +476,3 @@ if __name__ == '__main__':
     widget.show()
 
     sys.exit(app.exec_())
-
-

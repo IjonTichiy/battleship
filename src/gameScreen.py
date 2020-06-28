@@ -84,8 +84,9 @@ class GameScreen(qtw.QWidget):
 
         self.enemyView = qtw.QGraphicsView(self.enemy)
         self.enemyScene = Grid(self.enemyView, gridType='enemy')
-        # self.enemyScene.randomizePlacement()
-        # self.enemyScene.setShipVisibility(False)
+        self.enemyScene.randomizePlacement()
+        self.enemyScene.setShipVisibility(False)
+        self.enemyScene.finalizePlacement()
         self.enemyView.setScene(self.enemyScene)
 
         self.setGeometry(300, 300, 400, 300)
@@ -107,11 +108,13 @@ class GameScreen(qtw.QWidget):
                     'Ships are not placed according to rules!')
             return
 
+        Grid.gameFinished = False
         self.playerScene.finalizePlacement()
         self.statusBar.enterGameMode()
         self.runGameLoop()
 
     def exitGame(self):
+        Grid.gameFinished = True
         self.parent.exitGame()
 
     def runGameLoop(self):
@@ -129,6 +132,17 @@ class GameScreen(qtw.QWidget):
             elif Grid.currentPlayer == 'enemy':
                 self.enemyTurn()
 
+
+
+    def checkEliminated(self, scene):
+
+        for row in scene.fields:
+            for field in row:
+                if field.occupied and not field._hit:
+                    return False
+        else:
+            return True
+
     def isAlive(self):
         if self.parent:
             if not self.parent.isVisible(): return False
@@ -142,26 +156,48 @@ class GameScreen(qtw.QWidget):
         if not self.enemyScene.fieldSelected: return
         field = self.enemyScene.fieldSelected
         self.enemyScene.fieldSelected = None
+        if field._hit:
+            return
         field.hit()
+        if self.checkEliminated(self.enemyScene):
+            Grid.gameFinished = True
+            self.showGameOverScreen('You Won!')
+
         Grid.currentPlayer = 'enemy'
 
     def enemyTurn(self):
         sleep(0.2)
-        target = (randrange(0, Grid.gridSize[1]),
-                  randrange(0, Grid.gridSize[0]))
+        fieldValid = False
+        while not fieldValid:
 
-        self.playerScene.fields(*target).hit()
+            target = (randrange(0, Grid.gridSize[1]),
+                      randrange(0, Grid.gridSize[0]))
+            field = self.playerScene.fields[target[0]][target[1]]
+            if not field._hit:
+                fieldValid = True
+        field.hit()
+        if self.checkEliminated(self.playerScene):
+            Grid.gameFinished = True
+            self.showGameOverScreen('You Lost!')
         Grid.currentPlayer = 'player'
 
     def showHelp(self):
-
-        self.messageBox = qtw.QMessageBox()
-        self.messageBox.setIcon(qtw.QMessageBox.Information)
-        self.messageBox.setStandardButtons(qtw.QMessageBox.Ok)
-        self.messageBox.setDefaultButton(qtw.QMessageBox.Ok)
+        messageBox = qtw.QMessageBox()
+        messageBox.setIcon(qtw.QMessageBox.Information)
+        messageBox.setStandardButtons(qtw.QMessageBox.Ok)
+        messageBox.setDefaultButton(qtw.QMessageBox.Ok)
         with open(source_dir / 'rsc/helptext.txt') as helptext:
-            self.messageBox.setText(helptext.read())
-        self.messageBox.exec_()
+            messageBox.setText(helptext.read())
+        messageBox.exec_()
+
+    def showGameOverScreen(self, text):
+        gameOverBox = qtw.QMessageBox()
+        gameOverBox.setIcon(qtw.QMessageBox.Information)
+        gameOverBox.setStandardButtons(qtw.QMessageBox.Ok)
+        gameOverBox.setDefaultButton(qtw.QMessageBox.Ok)
+        gameOverBox.setText(text)
+        gameOverBox.exec_()
+        self.exitGame()
 
     def keyPressEvent(self, event):
         super(GameScreen, self).keyPressEvent(event)
@@ -170,7 +206,6 @@ class GameScreen(qtw.QWidget):
             self.showHelp()
         elif event.key() == 16777216:       # exit when pressing escape
             sys.exit()
-
 
 
 if __name__ == '__main__':

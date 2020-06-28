@@ -8,7 +8,6 @@ from PyQt5 import (QtWidgets as qtw, QtCore as qtc, QtGui as qtg)
 from gameScreen import GameScreen
 
 
-
 class MainWindow(qtw.QMainWindow):
 
     style = """
