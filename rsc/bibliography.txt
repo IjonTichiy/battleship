@@ -1,0 +1,12 @@
+Icons:
+Cruiser.svg:     Battleship by Anand Prahlad from thenounproject.com
+Carrier.svg:     USS Ronald Reagan (CVN-76) by Salaidinovich from thenounproject.com
+Destroyer.svg:   warship by zidney from thenounproject.com
+Battleship.svg:  Battleship by Yair Cohen from thenounproject.com
+Submarine.svg:   Submarine by Hea Poh Lin from thenounproject.com
+MissedShot.svg:  Cross by i cons from thenounproject.com
+HitShot.svg:     explosion by Julien Meysmans from thenounproject.com
+
+Images:
+MainWindow.jpg: Photo by Kevin Mueller on unsplash.com
+GameWindow.jpg: Photo by Thomas Park on unsplash.com

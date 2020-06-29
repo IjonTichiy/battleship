@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
+import pudb
 import sys
 import qdarkstyle
 from PyQt5 import (QtWidgets as qtw, QtCore as qtc, QtGui as qtg)
@@ -18,7 +19,7 @@ class MainWindow(qtw.QMainWindow):
 
     username = None
 
-    def __init__(self, parent, *args, **kwargs):
+    def __init__(self, parent=None, *args, **kwargs):
 
         super(MainWindow, self).__init__(parent)
         self.parent = parent
@@ -98,11 +99,11 @@ class MainWindow(qtw.QMainWindow):
 
 
 def start():
+    pu.db
     app = qtw.QApplication(sys.argv)
-    desktop = app.desktop()
     style = qdarkstyle.load_stylesheet_pyqt5()
     app.setStyleSheet(style)
-    window = MainWindow(desktop)
+    window = MainWindow()
     sys.exit(app.exec_())
 
 
