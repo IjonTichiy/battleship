@@ -132,9 +132,10 @@ class GameScreen(qtw.QWidget):
             elif Grid.currentPlayer == 'enemy':
                 self.enemyTurn()
 
-
-
     def checkEliminated(self, scene):
+        """
+        checks if the game is over
+        """
 
         for row in scene.fields:
             for field in row:
@@ -144,6 +145,9 @@ class GameScreen(qtw.QWidget):
             return True
 
     def isAlive(self):
+        """
+        checks if window is closed
+        """
         if self.parent:
             if not self.parent.isVisible(): return False
             else: return True
