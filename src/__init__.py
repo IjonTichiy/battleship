@@ -1,1 +1,1 @@
-from .core import Game
+from .mainWindow import MainWindow

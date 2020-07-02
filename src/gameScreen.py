@@ -7,9 +7,7 @@ from random import choice, randrange
 from PyQt5 import (QtWidgets as qtw, QtCore as qtc, QtGui as qtg, QtSvg as qsvg)
 from time import sleep
 
-
-from gridWidget import Grid
-# from .gridWidget import Grid
+from .gridWidget import Grid
 
 source_dir = Path(__file__).absolute().parent.parent
 
@@ -60,8 +58,10 @@ class StatusBar(qtw.QWidget):
 
 class GameScreen(qtw.QWidget):
 
+
     def __init__(self, *args, parent=None, **kwargs):
         super(GameScreen, self).__init__(*args, **kwargs)
+        self.setObjectName('gameWindow')
 
         self.parent = parent
 
@@ -91,7 +91,6 @@ class GameScreen(qtw.QWidget):
 
         self.setGeometry(300, 300, 400, 300)
         self.connect()
-        self.show()
 
     def connect(self):
         self.statusBar.btn_startGame.clicked.connect(
@@ -205,7 +204,6 @@ class GameScreen(qtw.QWidget):
 
     def keyPressEvent(self, event):
         super(GameScreen, self).keyPressEvent(event)
-        print(event.key())
         if event.key() == 63:               # ? press to open help
             self.showHelp()
         elif event.key() == 16777216:       # exit when pressing escape

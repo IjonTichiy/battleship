@@ -2,11 +2,10 @@
 # -*- coding: utf-8 -*-
 
 
-import pudb
 import sys
-import qdarkstyle
 from PyQt5 import (QtWidgets as qtw, QtCore as qtc, QtGui as qtg)
-from gameScreen import GameScreen
+
+from .gameScreen import GameScreen
 
 
 class MainWindow(qtw.QMainWindow):
@@ -14,6 +13,9 @@ class MainWindow(qtw.QMainWindow):
     style = """
     #mainButtons{
     border-image: url(rsc/MainWindow.jpg) 0 0 0 0 stretch stretch;
+    }
+    #gameWindow{
+    border-image: url(rsc/GameWindow.jpg) 0 0 0 0 stretch stretch;
     }
     """
 
@@ -99,7 +101,6 @@ class MainWindow(qtw.QMainWindow):
 
 
 def start():
-    pu.db
     app = qtw.QApplication(sys.argv)
     style = qdarkstyle.load_stylesheet_pyqt5()
     app.setStyleSheet(style)

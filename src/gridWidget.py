@@ -374,7 +374,7 @@ class Grid(qtw.QGraphicsScene):
                     self.fields[index[0]][index[1] + offset].occupied = True
                 elif ship.orientation == 'v':
                     self.fields[index[0] - offset][index[1]].occupied = True
-        self.printOccupied()  # for debug
+        # self.printOccupied()  # for debug
 
     def resetState(self):
         for row in self.fields:
@@ -425,10 +425,8 @@ class Grid(qtw.QGraphicsScene):
                         j_ < 0 or j_ >= self.gridSize[1]): continue
                 check[j_][i_] += val
 
-        print('check:')
-        for row in check:
-            print([i for i in row])
-        print('\n')
+        # for row in check:
+        #     print([i for i in row])
 
         for row in check:
             if any([x > 2 for x in row]):
